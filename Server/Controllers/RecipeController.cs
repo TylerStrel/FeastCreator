@@ -51,7 +51,7 @@ public class RecipeController : ControllerBase
         if (string.IsNullOrEmpty(title)) return BadRequest();
 
 
-        Recipe? recipe = new();
+        Recipe? recipe = null;
         int attempts = 0;
 
         while (recipe is null && attempts < 10)
@@ -67,7 +67,7 @@ public class RecipeController : ControllerBase
     [HttpGet, Route("GetRecipeImage")]
     public async Task<RecipeImage> GetRecipeImage(string recipeTitle)
     {
-        RecipeImage? recipeImage = new();
+        RecipeImage? recipeImage = null;
         int attempts = 0;
 
         while (recipeImage is null && attempts < 10)
