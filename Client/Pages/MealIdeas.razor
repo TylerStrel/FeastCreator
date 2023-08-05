@@ -1,0 +1,104 @@
+﻿@page "/mealideas"
+@using FeastCreator.Shared;
+@using System.Text.Json;
+@inject NavigationManager navigationManager;
+@inject HttpClient Http;
+
+@if (loaded == true)
+{
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mt-5">
+            <h3 class="align-items-start">Pick a meal to make</h3>
+            <button class="btn btn-warning align-items-end" @onclick="GetNewResults">Get New Results</button>
+        </div>
+        <div class="list-group">
+            @foreach (var idea in ideas)
+            {
+                <button @onclick="() => GetRecipe(idea.Index)" class="list-group-item list-group-item-action list-group-item-success p-2">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h2 class="mb-1 fw-bold">@idea.Title</h2>
+                    </div>
+                        <p class="mb-1">@idea.Description</p>
+                </button>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <CustomSpinner></CustomSpinner>
+}
+
+
+@code {
+    private List<Idea> ideas = new List<Idea>();
+    private bool loaded = false;
+
+    [CascadingParameter]
+    private MealState? mealState { get; set; }
+
+    private readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+    };
+
+    protected override void OnInitialized()
+    {
+        if (mealState is null)
+        {
+            navigationManager.NavigateTo("/", forceLoad: true);
+            return;
+        }
+
+        if (mealState.Ideas.Count < 1)
+        {
+            GetIdeas();
+        }
+        else
+        {
+            loaded = true;
+            ideas = mealState.Ideas;
+            StateHasChanged();
+        }
+    }
+
+    private void GetNewResults()
+    {
+        GetIdeas();
+    }
+
+    private async void GetIdeas()
+    {
+        string baseuri = "Recipe/GetMealIdeas";
+        loaded = false;
+
+        RecipeParams recipeParams = new RecipeParams()
+        {
+            MealTime = mealState!.MealTime,
+            Ingredients = mealState.Ingredients
+        };
+
+        try
+        {
+            HttpResponseMessage response = await Http.PostAsJsonAsync(baseuri, recipeParams, _jsonOptions);
+
+            response.EnsureSuccessStatusCode();
+
+            ideas = (await response.Content.ReadFromJsonAsync<List<Idea>>())!;
+            mealState.Ideas = ideas;
+            loaded = true;
+            StateHasChanged();
+        }
+        catch
+        {
+            Console.WriteLine("Error: Could not fetch feast ideas.");
+        }
+    }
+
+    private void GetRecipe(int index)
+    {
+        navigationManager.NavigateTo($"/mealrecipe/{index}");
+    }
+}
